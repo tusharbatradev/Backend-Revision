@@ -5,10 +5,9 @@ const bcrypt = require("bcrypt");
 const cookieParser = require("cookie-parser");
 const { userAuth } = require("./middleware/auth");
 
-
 const app = express();
 app.use(express.json());
-app.use(cookieParser())
+app.use(cookieParser());
 connectDb();
 
 app.post("/signup", async (req, res) => {
@@ -66,6 +65,45 @@ app.get("/users", userAuth, async (req, res) => {
     res.status(200).send(users);
   } catch (err) {
     res.status(400).send("Cannot get" + err);
+  }
+});
+
+app.delete("/delete/:id", userAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deletedUser = await User.findByIdAndDelete(id);
+
+    if (!deletedUser) {
+      return res.status(404).send("User not found");
+    }
+
+    res.status(200).send("User deleted successfully");
+  } catch (err) {
+    res.status(400).send("Error deleting user: " + err.message);
+  }
+});
+
+app.patch("/update/:id", userAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    if (updateData.password) {
+      updateData.password = await bcrypt.hash(updateData.password, 10);
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(id, updateData, {
+      runValidators: true,
+    });
+
+    if (!updatedUser) {
+      return res.status(404).send("User not found");
+    }
+
+    res.status(200).send("User updated successfully:\n" + updatedUser);
+  } catch (err) {
+    res.status(400).send("Error updating user: " + err.message);
   }
 });
 
